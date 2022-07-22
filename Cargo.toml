@@ -1,0 +1,20 @@
+[package]
+name = "quickbooks-ureq"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+concat-string = "1.0"
+http-auth-basic = "0.3"
+log = "0.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# strum        = { version = "0.24" }
+# strum_macros = { version = "0.24" }
+ureq = { version = "2.5",  features = ["charset", "json"] }
+
+
+reqwest = { version = "0.11", features = ["json", "blocking"] }  # TODO: remove once Quickbooks::refresh_access_token works with ureq
+tokio = { version = "1.19", features = ["macros", "rt"] }        # TODO: remove once Quickbooks::refresh_access_token works with ureq
