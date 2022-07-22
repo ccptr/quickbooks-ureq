@@ -11,6 +11,14 @@ pub mod config {
     }
 
     #[derive(Clone, Debug, PartialEq)]
+    pub struct QueryConfig<'a> {
+        pub r#where: Option<&'a str>,
+        pub order_by: Option<&'a str>,
+        pub start_position: usize,
+        pub max_results: usize,
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
     pub struct QuickbooksConfig {
         pub client_id: String,
         pub client_secret: String,
@@ -21,6 +29,17 @@ pub mod config {
         pub token: super::AccessToken,
 
         pub api: Option<ApiConfig>,
+    }
+
+    impl Default for QueryConfig<'_> {
+        fn default() -> Self {
+            Self {
+                r#where: None,
+                order_by: None,
+                start_position: 1,
+                max_results: crate::constants::MAX_QUERY_LENGTH,
+            }
+        }
     }
 }
 

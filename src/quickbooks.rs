@@ -94,19 +94,29 @@ impl Quickbooks {
     }
 
     // It doesn't seem to be possible to return a Vec<Response> in case there are
-    // more than 1,000 items due to a limitation of ureq, so we're left with `start_position` :/
+    // more than 1,000 items due to a limitation of ureq, so we're left with `QueryConfig::start_position` :/
 
-    /// Returns a list of all items (products) up to 1,000 items, starting at `start_position` (must be at least 1)
-    pub fn query_items(&self, start_position: usize) -> Result {
+    /// Returns a list of items (products) up to 1,000 items, starting at `QueryConfig::start_position` (must be at least 1)
+    pub fn query_items(&self, config: QueryConfig) -> Result {
         #[cfg(debug_assertions)]
-        assert_ne!(start_position, 0);
+        assert_ne!(config.start_position, 0);
 
-        self.query(&concat_string!(
+        let mut query = concat_string!(
             "SELECT * FROM Item MAXRESULTS ",
             MAX_QUERY_LENGTH.to_string(),
             " STARTPOSITION ",
-            start_position.to_string()
-        ))
+            config.start_position.to_string()
+        );
+
+        if let Some(r#where) = config.r#where {
+            query = concat_string!(query, " WHERE ", r#where);
+        }
+
+        if let Some(order_by) = config.order_by {
+            query = concat_string!(query, " ORDERBY ", order_by);
+        }
+
+        self.query(&query)
     }
 
     /// this does not currently work, presumably due to a bug in ureq
