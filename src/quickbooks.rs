@@ -97,7 +97,7 @@ impl Quickbooks {
     // more than 1,000 items due to a limitation of ureq, so we're left with `start_position` :/
 
     /// Returns a list of all items (products) up to 1,000 items, starting at `start_position` (must be at least 1)
-    pub fn list_items(&self, start_position: usize) -> Result {
+    pub fn query_items(&self, start_position: usize) -> Result {
         #[cfg(debug_assertions)]
         assert_ne!(start_position, 0);
 
