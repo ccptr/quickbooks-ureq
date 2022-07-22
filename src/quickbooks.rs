@@ -115,6 +115,7 @@ impl Quickbooks {
 
         let credentials = Credentials::new(&self.config.client_id, &self.config.client_secret);
 
+        // TODO: once ureq is fixed this can probably be changed to self.agent.post(...)...
         let response = ureq::post("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer")
             .set("accept", "application/json")
             .set("authorization", &credentials.as_http_header())
