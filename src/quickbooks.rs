@@ -11,6 +11,7 @@ type Result = crate::Result<ureq::Response>;
 
 #[derive(Clone, Debug)]
 struct ApiPaths {
+    pub read_item: String,
     pub query: String,
 }
 
@@ -36,16 +37,36 @@ impl From<QuickbooksConfig> for Quickbooks {
             .timeout(Duration::from_secs(5))
             .https_only(true);
 
+        let base = concat_string!(config.base_url, "/v3/company/", config.company_id);
+
         Self {
             config: config.clone(),
             agent: builder.build(),
             paths: ApiPaths {
-                query: format!(
-                    "{}/v3/company/{}/query{}",
-                    config.base_url, config.company_id, minor_version
-                ),
+                read_item: concat_string!(base, "/item/"),
+                query:     concat_string!(base, "/query", minor_version),
             },
         }
+    }
+}
+
+trait SetHeaders {
+    fn set_headers(self, token: &AccessToken) -> Self;
+}
+
+impl SetHeaders for Request {
+    fn set_headers(self, token: &AccessToken) -> Self {
+        self
+            .set("Accept", "application/json")
+            .set("Content-Type", "application/json")
+            .set(
+                "Authorization",
+                &concat_string!(
+                    token.token_type,
+                    " ",
+                    token.access_token
+                ),
+            )
     }
 }
 
@@ -54,16 +75,7 @@ impl Quickbooks {
         // TODO: url encode `query`?
         self.agent
             .get(&self.paths.query)
-            .set("Accept", "application/json")
-            .set("Content-Type", "application/json")
-            .set(
-                "Authorization",
-                &concat_string!(
-                    self.config.token.token_type,
-                    " ",
-                    self.config.token.access_token
-                ),
-            )
+            .set_headers(&self.config.token)
             .query("query", query)
     }
 
@@ -75,12 +87,25 @@ impl Quickbooks {
         self.query("SELECT * FROM CompanyInfo")
     }
 
-    // TODO: return a vec of queries if necessary to get all the results?
-    /// Returns a list of all items (products) up to 1,000 items
-    pub fn list_items(&self) -> Result {
+    pub fn read_item(&self, item_id: &str) -> Result {
+        self.agent
+            .get(&concat_string!(self.paths.read_item, item_id, "?minorversion=65"))
+            .set_headers(&self.config.token)
+            .call()
+    }
+
+    // It doesn't seem to be possible to return a Vec<Response> in case there are
+    // more than 1,000 items due to a limitation of ureq, so we're left with `start_position` :/
+
+    /// Returns a list of all items (products) up to 1,000 items, starting at `start_position` (must be at least 1)
+    pub fn list_items(&self, start_position: usize) -> Result {
+        #[cfg(debug_assertions)]
+        assert_ne!(start_position, 0);
+
         self.query(&concat_string!(
             "SELECT * FROM Item MAXRESULTS ",
-            MAX_QUERY_LENGTH.to_string()
+            MAX_QUERY_LENGTH.to_string(),
+            " STARTPOSITION ", start_position.to_string()
         ))
     }
 
