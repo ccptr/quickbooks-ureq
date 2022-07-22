@@ -44,7 +44,7 @@ impl From<QuickbooksConfig> for Quickbooks {
             agent: builder.build(),
             paths: ApiPaths {
                 read_item: concat_string!(base, "/item/"),
-                query:     concat_string!(base, "/query", minor_version),
+                query: concat_string!(base, "/query", minor_version),
             },
         }
     }
@@ -56,16 +56,11 @@ trait SetHeaders {
 
 impl SetHeaders for Request {
     fn set_headers(self, token: &AccessToken) -> Self {
-        self
-            .set("Accept", "application/json")
+        self.set("Accept", "application/json")
             .set("Content-Type", "application/json")
             .set(
                 "Authorization",
-                &concat_string!(
-                    token.token_type,
-                    " ",
-                    token.access_token
-                ),
+                &concat_string!(token.token_type, " ", token.access_token),
             )
     }
 }
@@ -89,7 +84,11 @@ impl Quickbooks {
 
     pub fn read_item(&self, item_id: &str) -> Result {
         self.agent
-            .get(&concat_string!(self.paths.read_item, item_id, "?minorversion=65"))
+            .get(&concat_string!(
+                self.paths.read_item,
+                item_id,
+                "?minorversion=65"
+            ))
             .set_headers(&self.config.token)
             .call()
     }
@@ -105,7 +104,8 @@ impl Quickbooks {
         self.query(&concat_string!(
             "SELECT * FROM Item MAXRESULTS ",
             MAX_QUERY_LENGTH.to_string(),
-            " STARTPOSITION ", start_position.to_string()
+            " STARTPOSITION ",
+            start_position.to_string()
         ))
     }
 
