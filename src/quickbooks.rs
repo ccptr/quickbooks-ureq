@@ -40,7 +40,7 @@ impl From<QuickbooksConfig> for Quickbooks {
         let base = concat_string!(config.base_url, "/v3/company/", config.company_id);
 
         Self {
-            config: config.clone(),
+            config,
             agent: builder.build(),
             paths: ApiPaths {
                 read_item: concat_string!(base, "/item/"),
