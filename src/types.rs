@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-pub use ureq::{Error, ErrorKind};
+pub use ureq::{Error, ErrorKind, Response};
 
-pub type Result<T> = core::result::Result<T, ureq::Error>;
+pub type Result = core::result::Result<ureq::Response, ureq::Error>;
 
 pub mod config {
     #[derive(Clone, Debug, PartialEq)]

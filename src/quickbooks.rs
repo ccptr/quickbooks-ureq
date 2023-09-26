@@ -7,11 +7,9 @@ use crate::{
 use concat_string::concat_string;
 use ureq::{Agent, AgentBuilder, Request};
 
-type Result = crate::Result<ureq::Response>;
-
 #[derive(Clone, Debug)]
 struct ApiPaths {
-    pub read_item: String,
+    pub base: String,
     pub query: String,
 }
 
@@ -43,8 +41,8 @@ impl From<QuickbooksConfig> for Quickbooks {
             config,
             agent: builder.build(),
             paths: ApiPaths {
-                read_item: concat_string!(base, "/item/"),
                 query: concat_string!(base, "/query", minor_version),
+                base,
             },
         }
     }
@@ -66,7 +64,7 @@ impl SetHeaders for Request {
 }
 
 impl Quickbooks {
-    fn build_query(&self, query: &str) -> Request {
+    pub fn build_query(&self, query: &str) -> Request {
         // TODO: url encode `query`?
         self.agent
             .get(&self.paths.query)
@@ -74,35 +72,12 @@ impl Quickbooks {
             .query("query", query)
     }
 
-    fn query(&self, query: &str) -> Result {
-        self.build_query(query).call()
-    }
-
-    pub fn company_info(&self) -> Result {
-        self.query("SELECT * FROM CompanyInfo")
-    }
-
-    pub fn read_item(&self, item_id: &str) -> Result {
-        self.agent
-            .get(&concat_string!(
-                self.paths.read_item,
-                item_id,
-                "?minorversion=65"
-            ))
-            .set_headers(&self.config.token)
-            .call()
-    }
-
-    // It doesn't seem to be possible to return a Vec<Response> in case there are
-    // more than 1,000 items due to a limitation of ureq, so we're left with `QueryConfig::start_position` :/
-
-    /// Returns a list of items (products) up to 1,000 items, starting at `QueryConfig::start_position` (must be at least 1)
-    pub fn query_items(&self, config: QueryConfig) -> Result {
+    pub fn query(&self, key: &str, config: &QueryConfig) -> Result {
         #[cfg(debug_assertions)]
         assert_ne!(config.start_position, 0);
 
         let mut query = concat_string!(
-            "SELECT * FROM Item MAXRESULTS ",
+            "SELECT * FROM ", key, " MAXRESULTS ",
             MAX_QUERY_LENGTH.to_string(),
             " STARTPOSITION ",
             config.start_position.to_string()
@@ -116,7 +91,40 @@ impl Quickbooks {
             query = concat_string!(query, " ORDERBY ", order_by);
         }
 
-        self.query(&query)
+        self.build_query(&query).call()
+    }
+
+    /// reads a single item
+    pub fn read(&self, key: &str, id: &str) -> Result {
+        self.agent
+            .get(&concat_string!(
+                self.paths.base,
+                "/", key, "/",
+                id,
+                "?minorversion=65"
+            ))
+            .set_headers(&self.config.token)
+            .call()
+    }
+
+    pub fn company_info(&self) -> Result {
+        self.build_query("SELECT * FROM CompanyInfo").call()
+    }
+
+    pub fn read_item(&self, id: &str) -> Result {
+        self.read("item", id)
+    }
+
+    pub fn query_customers(&self, config: &QueryConfig) -> Result {
+        self.query("Customer", config)
+    }
+
+    // It doesn't seem to be possible to return a Vec<Response> in case there are
+    // more than 1,000 items due to a limitation of ureq, so we're left with `QueryConfig::start_position` :/
+
+    /// Returns a list of items (products) up to 1,000 items, starting at `QueryConfig::start_position` (must be at least 1)
+    pub fn query_items(&self, config: &QueryConfig) -> Result {
+        self.query("Item", config)
     }
 
     /// this does not currently work, presumably due to a bug in ureq
